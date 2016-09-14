@@ -217,9 +217,23 @@
 			extcon = <&usb_id>, <&usb_id>;
 			dr_mode = "otg";
 			status = "okay";
-			switch-gpio = <&pm8916_gpios 4 GPIO_ACTIVE_HIGH>;
-			pinctrl-names = "default";
-			pinctrl-0 = <&usb_sw_sel_pm>;
+			usb-controller; // needed?
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				port@0 {
+					#address-cells = <1>;
+					#size-cells = <0>;
+					reg = <0>;
+
+					usb_output: endpoint@0 { // USB D+/D-
+						reg = <0>;
+						remote-endpoint = <&usb_switch_input>;
+					};
+				};
+			};
 		};
 
 		lpass@07708000 {
@@ -352,6 +366,38 @@
 		compatible = "smsc,usb3503";
 		reset-gpios = <&pm8916_gpios 3 GPIO_ACTIVE_LOW>;
 		initial-mode = <1>;
+		usb-hub; // indicate this is a hub
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <0>;
+
+				usb_hub_input: endpoint@0 { // USB{DP,DM}_UP
+					reg = <0>;
+					remote-endpoint = <&usb_switch_hub_ep>;
+				};
+
+				usb_hub_output1: endpoint@1 { // USB{DP,DM}_DN1
+					reg = <1>;
+					remote-endpoint = <&usb_a2_connector>;
+				};
+
+				usb_hub_output2: endpoint@2 { // USB{DP,DM}_DN2
+					reg = <2>;
+					remote-endpoint = <&usb_a1_connector>;
+				};
+
+				usb_hub_output3: endpoint@3 { // USB{DP,DM}_DN3
+					reg = <3>;
+					// goes to expansion connector
+				};
+			};
+		};
 	};
 
 	usb_id: usb-id {
@@ -359,6 +405,88 @@
 		id-gpio = <&msmgpio 121 GPIO_ACTIVE_HIGH>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&usb_id_default>;
+	};
+
+	usb-switch {
+		compatible = "toshiba,tc7usb40mu";
+		switch-gpios = <&pm8916_gpios 4 GPIO_ACTIVE_HIGH>;
+		extcon = <&usb_id>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&usb_sw_sel_pm>;
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@0 {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				reg = <0>;
+
+				usb_switch_input: endpoint@0 { // D+/D-
+					reg = <0>;
+					remote-endpoint = <&usb_output>;
+				};
+
+				usb_switch_device_ep: endpoint@1 { // D1+/D1-
+					reg = <1>;
+					remote-endpoint = <&usb_ub_connector>;
+				};
+
+				usb_switch_hub_ep: endpoint@2 { // D2+/D2-
+					reg = <2>;
+					remote-endpoint = <&usb_hub_input>;
+				};
+			};
+		};
+	};
+
+	uB-connector {
+		compatible = "usb-ub-connector";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		usb-connector;
+		port@0 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0>;
+			usb_ub_connector: endpoint@0 {
+				reg = <0>;
+				remote-endpoint = <&usb_switch_device_ep>;
+			};
+		};
+	};
+
+	usb-A-connector1 {
+		compatible = "usb-A-connector";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		usb-connector;
+		port@0 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0>;
+			usb_a1_connector: endpoint@0 {
+				reg = <0>;
+				remote-endpoint = <&usb_hub_output2>;
+			};
+		};
+	};
+
+	usb-A-connector2 {
+		compatible = "usb-A-connector";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		usb-connector;
+		port@0 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0>;
+			usb_a2_connector: endpoint@0 {
+				reg = <0>;
+				remote-endpoint = <&usb_hub_output1>;
+			};
+		};
 	};
 
 	hdmi-out {
